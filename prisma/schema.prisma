@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Organization {
+  id        String                    @id @default(cuid())
+  name      String
+  demo      Boolean                   @default(false)
+  users     User[]
+  galleries Gallery[]
+  config    MeasurementConfiguration?
+  reports   Report[]
+  audits    AuditLog[]
+  content   AudioContent[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  name           String
+  passwordHash   String
+  role           String       @default("VIEWER")
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+model Gallery {
+  id             String       @id @default(cuid())
+  name           String
+  timezone       String       @default("America/Denver")
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  stations       Station[]
+
+  @@index([organizationId])
+}
+
+model Station {
+  id          String             @id @default(cuid())
+  name        String
+  location    String
+  hardware    String             @default("Audio player gateway")
+  enabled     Boolean            @default(true)
+  maintenance Boolean            @default(false)
+  galleryId   String
+  gallery     Gallery            @relation(fields: [galleryId], references: [id])
+  devices     Device[]
+  events      RawEvent[]
+  sessions    ListeningSession[]
+
+  @@index([galleryId])
+}
+
+model Device {
+  id            String             @id @default(cuid())
+  name          String
+  stationId     String
+  station       Station            @relation(fields: [stationId], references: [id])
+  simulated     Boolean            @default(false)
+  lastHeartbeat DateTime?
+  credentials   DeviceCredential[]
+  events        RawEvent[]
+  sessions      ListeningSession[]
+
+  @@index([stationId])
+}
+
+model DeviceCredential {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  deviceId  String
+  device    Device    @relation(fields: [deviceId], references: [id])
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@index([deviceId])
+}
+
+model RawEvent {
+  id             String            @id @default(cuid())
+  eventId        String
+  stationId      String
+  station        Station           @relation(fields: [stationId], references: [id])
+  deviceId       String
+  device         Device            @relation(fields: [deviceId], references: [id])
+  type           String
+  timestamp      DateTime
+  ingestedAt     DateTime          @default(now())
+  sourceType     String
+  sourceId       String
+  schemaVersion  Int               @default(1)
+  sessionKey     String?
+  metadata       Json              @default("{}")
+  duplicateCount Int               @default(0)
+  flags          DataQualityFlag[]
+
+  @@unique([deviceId, eventId])
+  @@index([stationId, timestamp])
+  @@index([deviceId, timestamp])
+  @@index([stationId, sourceType, sessionKey])
+}
+
+model ListeningSession {
+  id              String    @id
+  stationId       String
+  station         Station   @relation(fields: [stationId], references: [id])
+  sessionKey      String
+  deviceId        String
+  device          Device    @relation(fields: [deviceId], references: [id])
+  startedAt       DateTime?
+  endedAt         DateTime?
+  durationSeconds Float?
+  sourceType      String
+  confidence      String
+  status          String
+  trackId         String?
+  flags           Json
+  eventIds        Json
+
+  @@unique([stationId, deviceId, sourceType, sessionKey])
+  @@index([stationId, startedAt])
+}
+
+model AudioContent {
+  id              String       @id @default(cuid())
+  title           String
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  durationSeconds Int?
+}
+
+model DataQualityFlag {
+  id      String   @id @default(cuid())
+  eventId String
+  event   RawEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  code    String
+  detail  String
+
+  @@unique([eventId, code])
+}
+
+model MeasurementConfiguration {
+  id                      String       @id @default(cuid())
+  organizationId          String       @unique
+  organization            Organization @relation(fields: [organizationId], references: [id])
+  engagedSeconds          Int          @default(60)
+  maxSessionSeconds       Int          @default(14400)
+  heartbeatTimeoutSeconds Int          @default(180)
+  reportTimezone          String       @default("America/Denver")
+}
+
+model Report {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  periodStart    DateTime
+  periodEnd      DateTime
+  sourceType     String
+  timezone       String
+  snapshot       Json
+  generatedAt    DateTime     @default(now())
+
+  @@unique([organizationId, periodStart, periodEnd, sourceType])
+  @@index([organizationId, generatedAt])
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  actor          String
+  action         String
+  detail         Json         @default("{}")
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+}
+
+model RateBucket {
+  key       String   @id
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

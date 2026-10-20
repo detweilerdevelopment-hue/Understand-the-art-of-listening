@@ -1,0 +1,38 @@
+name: Verify GalleryPulse
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: gallerypulse
+          POSTGRES_PASSWORD: gallerypulse
+          POSTGRES_DB: gallerypulse
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://gallerypulse:gallerypulse@localhost:5432/gallerypulse
+      DIRECT_URL: postgresql://gallerypulse:gallerypulse@localhost:5432/gallerypulse
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ci-only-random-secret-replace-in-production-123
+      ADMIN_EMAIL: admin@gallerypulse.local
+      ADMIN_PASSWORD: ci-test-password-only-12345
+      RUN_DB_TESTS: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

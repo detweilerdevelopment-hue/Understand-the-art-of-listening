@@ -1,0 +1,48 @@
+# API contracts
+
+## Public read-only demonstration
+
+`GET /api/demo/analytics`, `/api/demo/sessions` and `/api/demo/reports` provide the read contracts below without authentication, fixed to the seeded demo organization and `sourceType=simulated`. Session/report IDs are checked against both constraints. Requests for measured data are forbidden; writes have no public handlers (405). There is no public settings, credential, provisioning, reset, or report-generation endpoint. Disable all public access with `PUBLIC_DEMO_ENABLED=false`. Public exports use saved sample reports and do not modify stored measurements.
+
+## Device ingestion
+
+`POST /api/events`, `Authorization: Bearer gp_<token>`, JSON:
+
+```json
+{
+  "eventId": "gateway-unique-uuid",
+  "stationId": "station-id",
+  "type": "playback_started",
+  "timestamp": "2026-10-20T16:30:00.000Z",
+  "sourceType": "measured",
+  "sourceId": "provisioned-device-id",
+  "schemaVersion": 1,
+  "sessionKey": "persistent-interaction-uuid",
+  "metadata": { "trackId": "content-id" }
+}
+```
+
+Fields are validated with Zod. Metadata accepts flat string/number/boolean/null values. The server assigns ingestion time. Playback/session events require a sessionKey. Supported types: station_heartbeat, presence_detected, presence_ended, headphones_connected, headphones_disconnected, playback_started, playback_paused, playback_resumed, playback_stopped, session_started, session_ended.
+
+Success: `{ "duplicate": false, "id": "raw-event-id" }`, 200. Identical retry: duplicate true, 200. Retry with the original event ID; never assign new IDs to retransmissions. 400 invalid schema/future timestamp/conflicting event identity; 401 invalid or revoked token; 403 source/station mismatch; 429 >180 accepted attempts/device/minute; 500 storage/processing error. Retry 429/5xx with exponential backoff and jitter. Fix 400/401/403 before retrying. Explicit Content-Length over 16 KiB is rejected; configure edge body-size limits for chunked requests.
+
+## Authenticated workspace APIs
+
+Auth.js session required for every route below. Browser writes require a same-origin request. ADMIN or ANALYST writes except where indicated.
+
+| Route                         | Contract                                                        |
+| ----------------------------- | --------------------------------------------------------------- | ----------------------------------- |
+| GET /api/analytics            | `start`, `end` ISO timestamps, `source=measured                 | simulated`; max 93 days             |
+| GET /api/sessions             | Above plus `page`, `sort=asc                                    | desc`, optional `station`, `status` |
+| GET /api/sessions?id=…        | Scoped session + ordered raw evidence                           |
+| POST /api/stations            | `id?`, name, location, hardware, enabled, maintenance           |
+| POST /api/devices             | ADMIN: stationId, name; returns deviceId and one-time token     |
+| DELETE /api/devices           | ADMIN: deviceId; revokes all device tokens                      |
+| POST /api/simulator           | Same event contract; sourceId/sourceType overridden server-side |
+| DELETE /api/simulator         | Deletes only scoped simulated measurements/reports; audited     |
+| POST /api/config              | ADMIN: engagedSeconds 10–3600, heartbeatTimeoutSeconds 60–3600  |
+| POST /api/reports             | start, end, source; stores/regenerates period snapshot          |
+| GET /api/reports?id=…         | PDF download of saved snapshot                                  |
+| GET /api/reports?format=csv&… | Up to 50,000 scoped session rows; spreadsheet formulas escaped  |
+
+`GET /api/health` returns status only, 200 or 503. `GET /api/cron` requires `Authorization: Bearer <CRON_SECRET>`, generates the prior complete UTC week and returns generated/failed counts. Login: Auth.js `/api/auth/*` CSRF-protected credential flow. Rate limits are shared PostgreSQL minute buckets, not in-memory counters.
