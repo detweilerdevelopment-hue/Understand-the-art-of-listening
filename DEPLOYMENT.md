@@ -1,28 +1,35 @@
-# Deploy to Vercel + Neon
+# Deploy the public demo to Vercel
 
-## Public proposal demo
+The public presentation now works **without PostgreSQL, Neon, login credentials, or environment variables**.
 
-After deploying and seeding the demo database, share `https://<your-domain>/demo/overview` (or the domain root). No client credentials are required. Leave `PUBLIC_DEMO_ENABLED=true` for public sample access; administrator login and all writes remain protected. Only the dedicated demo organization’s simulated records and simulated report snapshots are exposed. Set this flag to false to disable public pages and APIs. Provision real gallery users separately; never move real measurements into the demonstration organization.
+1. Open https://vercel.com/new and import `detweilerdevelopment-hue/Understand-the-art-of-listening` from GitHub.
+2. Choose Next.js, the repository root, and Node.js 24.
+3. Keep the build command as `npm run build`. The default `vercel.json` already selects it. Remove any older build override that runs `prisma migrate deploy`.
+4. Leave environment variables empty. No database URL, auth secret, administrator password, or cron secret is required for this demo.
+5. Click Deploy and share the production domain root or `/demo/overview`.
+6. Open that URL in a private browser window to confirm anonymous access. If Vercel itself asks for authentication, review its Deployment Protection settings and use the intended public production URL.
 
-The local URL cannot be shared with external clients. Publishing still requires authorized Vercel and Neon accounts and production environment variables. A working local demo does not establish that a cloud deployment has occurred.
+Sample charts, date filters, session pagination, event evidence and PDF/CSV downloads work from deterministic packaged data. Writes, administrator login, live hardware, and real visitor measurements are unavailable in this mode. The sample dataset is anchored to 20 October 2026 and its time labels describe historical synthetic activity.
 
-1. Create a Neon PostgreSQL project in the appropriate region. Obtain pooled application and direct migration URLs, both with `sslmode=require`. Do not share these values.
-2. Push this repository to your Git provider. Import it into Vercel as a Next.js project with Node.js 24. No Sites/Cloudflare deployment is configured because this application targets the requested Next.js runtime.
-3. Set DATABASE_URL to the pooled connection, DIRECT_URL to the direct connection, NEXTAUTH_URL to the final HTTPS origin, NEXTAUTH_SECRET to a securely generated random secret, and CRON_SECRET to a different random secret. Set administrator seed variables only in a trusted provisioning environment.
-4. Run `npm ci`, `npm run db:generate` and `npm run db:migrate` against the target database. Vercel’s configured build also runs migrations; use one deployment pipeline per database to avoid competing migration jobs.
-5. For evaluation only, run `npm run db:seed` with ADMIN_EMAIL and ADMIN_PASSWORD (12+ characters). This creates a demo organization and only simulated events. Do not use the demonstration organization as a production tenant.
-6. For a real tenant, provision Organization → Gallery → MeasurementConfiguration → User with a bcrypt cost-12 password hash through a trusted Prisma administration script or `npx prisma studio` in a secured environment. Set demo=false. No public user registration exists. Rotate any temporary password and disable direct database administration afterward.
-7. Deploy. Vercel reads vercel.json: weekly `/api/cron` Monday 07:00 UTC, authorized by CRON_SECRET. Verify your Vercel plan supports the schedule and required function runtime. No provider credentials are included in the source tree.
-8. Validate `/api/health`, unauthorized API 401, HTTPS sign-in/sign-out, tenant isolation, station provisioning, simulator persistence, PDF/CSV and cron authorization. Configure alerts for structured ingestion errors and `report.cron.failed` logs.
-9. Enable Neon backups/restore policy, Vercel log retention/alerts, dependency scanning, edge request-size controls and a physical acceptance plan. Load-test the expected installation volume.
+`PUBLIC_DEMO_ENABLED=false` disables public pages/APIs. This optional flag is not needed for the normal presentation. `DEMO_ONLY=true` can explicitly disable backend access if an existing project already has database variables.
+
+## Optional database-backed installation
+
+For a real gallery installation:
+
+1. Provision PostgreSQL (for example, Neon), with a pooled DATABASE_URL and direct DIRECT_URL, both using SSL.
+2. Configure NEXTAUTH_URL with the HTTPS domain, random NEXTAUTH_SECRET and CRON_SECRET, and administrator provisioning variables in a trusted environment. Keep secrets out of Git and browser bundles.
+3. Run `npm run db:generate` and `npm run db:migrate` against that database. Default demo deployment no longer runs migrations automatically.
+4. For evaluation, `npm run db:seed` creates the isolated database demonstration tenant; public pages still use packaged samples. For production, set GALLERY_NAME, ADMIN_EMAIL and ADMIN_PASSWORD (12+ characters) and run `npm run db:provision`. It will not overwrite existing accounts.
+5. Enable scheduled reporting by copying the cron/build configuration from `vercel.database.json` to the active `vercel.json`, or configuring its `/api/cron` Monday 07:00 UTC schedule in your deployment setup. CRON_SECRET must be configured for these authenticated jobs. This optional configuration runs migrations during the build.
+6. Validate HTTPS login, organization isolation, credentials, ingestion, simulator persistence, exports, cron, backups and monitoring. Complete security/load/hardware acceptance before commissioning.
 
 ## Troubleshooting
 
-- Prisma connection error: check SSL, pooled vs direct URLs, region, DB permissions and Neon availability.
-- Missing tables: run `npm run db:migrate`; verify the target database before seeding.
-- Login rejected: verify the seeded email/password, bcrypt hash, NEXTAUTH_URL/SECRET and consistent secrets across deployments. The seed updates a matching email’s password only; never run it with a production account email.
-- Empty dashboard: select the intended source and period; simulator data appears under Synthetic data. A session duration becomes known after a consistent stop.
-- Offline station: send a current heartbeat with the provisioned sourceId. Historical events do not establish connectivity.
-- Missing weekly report: verify cron/plan/secret, UTC boundaries and structured errors. Retry manually with authenticated POST /api/reports. The unique period key prevents duplicate history entries.
+- Database error during a demo build: remove a legacy `prisma migrate deploy` build override; use the repository's current default configuration.
+- Unexpected administrator tools in a demo deployment: remove inherited database settings or set DEMO_ONLY=true. The public dataset is still independent of that backend.
+- Empty demo: remove PUBLIC_DEMO_ENABLED=false. No database seed is required.
+- Optional backend unavailable: check SSL, pooled/direct URLs, migration status and database availability.
+- Local startup: `npm run dev` is sufficient for the public demo. PostgreSQL needs its own running service only for backend operations.
 
-Cloud deployment, managed Neon connectivity, cron execution on Vercel and hardware installation require external accounts and are not validated merely by a local build.
+Cloud deployment itself is not claimed until a provider returns a successful deployment URL. Physical hardware and operational validation remain separate commissioning work.

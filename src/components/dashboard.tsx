@@ -55,7 +55,13 @@ import {
   Methodology,
 } from "./dashboard-parts";
 import { Simulator } from "./simulator";
-type User = { name: string; role: string; demo: boolean; publicDemo?: boolean };
+type User = {
+  name: string;
+  role: string;
+  demo: boolean;
+  publicDemo?: boolean;
+  backendEnabled?: boolean;
+};
 const nav = [
   { id: "overview", label: "Executive overview", icon: LayoutDashboard },
   { id: "stations", label: "Listening stations", icon: Headphones },
@@ -225,10 +231,10 @@ export function Dashboard({
     return () => clearTimeout(id);
   }, [refresh]);
   useEffect(() => {
-    if (section !== "live") return;
+    if (section !== "live" || user.publicDemo) return;
     const id = setInterval(() => void refresh(true), 5000);
     return () => clearInterval(id);
-  }, [section, refresh]);
+  }, [section, refresh, user.publicDemo]);
   useEffect(() => {
     if (!notice) return;
     const id = setTimeout(() => setNotice(""), 5000);
@@ -432,7 +438,7 @@ export function Dashboard({
             <strong>{titles[section][0]}</strong>
           </div>
           <div className="topbar-right">
-            {user.publicDemo && (
+            {user.publicDemo && user.backendEnabled && (
               <Link href="/login" className="text-link">
                 Admin sign in
                 <ArrowUpRight size={13} />
@@ -472,10 +478,14 @@ export function Dashboard({
                   <strong>{user.name}</strong>
                   <span>{user.role.toLowerCase()}</span>
                   {user.publicDemo ? (
-                    <Link href="/login" className="text-link">
-                      Administrator sign in
-                      <ArrowUpRight size={14} />
-                    </Link>
+                    user.backendEnabled ? (
+                      <Link href="/login" className="text-link">
+                        Administrator sign in
+                        <ArrowUpRight size={14} />
+                      </Link>
+                    ) : (
+                      <span>Read-only sample workspace</span>
+                    )
                   ) : (
                     <button onClick={() => signOut({ callbackUrl: "/login" })}>
                       <LogOut size={15} />
@@ -510,7 +520,11 @@ export function Dashboard({
             <div>
               <div className="eyebrow">LISTEN. UNDERSTAND. IMPROVE.</div>
               <h1>{titles[section][0]}</h1>
-              <p>{titles[section][1]}</p>
+              <p>
+                {user.publicDemo && section === "live"
+                  ? "Packaged sample events. No live hardware is connected to this preview."
+                  : titles[section][1]}
+              </p>
             </div>
             <div className="heading-actions">
               {section === "stations" && writable ? (
@@ -941,7 +955,11 @@ export function Dashboard({
           {section === "live" && (
             <>
               <div className="live-heading">
-                <Badge tone="green">Polling every 5 seconds</Badge>
+                <Badge tone="neutral">
+                  {user.publicDemo
+                    ? "Packaged sample stream"
+                    : "Polling every 5 seconds"}
+                </Badge>
                 <span className="muted small">
                   Events are persisted before they appear here.
                 </span>
@@ -1336,7 +1354,11 @@ export function Dashboard({
                   title="Report library"
                   subtitle="Saved snapshots. Reproducible findings."
                   right={
-                    <Badge tone="green">Weekly automation configured</Badge>
+                    <Badge tone="green">
+                      {user.publicDemo
+                        ? "Packaged sample reports"
+                        : "Weekly automation configured"}
+                    </Badge>
                   }
                 />
                 {data.reports.length ? (
@@ -1395,10 +1417,21 @@ export function Dashboard({
               <div className="info-panel">
                 <CalendarDays size={18} />
                 <p>
-                  <strong>Weekly by design.</strong> Vercel Cron prepares
-                  reports on Mondays at 07:00 UTC for the previous Monday–Monday
-                  UTC period. Deploy with a cron secret to enable automation.
-                  Email delivery is not configured.
+                  {user.publicDemo ? (
+                    <>
+                      These sample reports are packaged with the preview.
+                      Automated weekly reporting is available with the
+                      database-backed installation.
+                    </>
+                  ) : (
+                    <>
+                      {" "}
+                      <strong>Weekly by design.</strong> Vercel Cron prepares
+                      reports on Mondays at 07:00 UTC for the previous
+                      Monday–Monday UTC period. Deploy with a cron secret to
+                      enable automation. Email delivery is not configured.
+                    </>
+                  )}
                 </p>
               </div>
             </>

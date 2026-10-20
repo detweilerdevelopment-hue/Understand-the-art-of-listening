@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { demoActor, demoAnalytics, demoPeriod } from "@/lib/public-demo";
-import { db } from "@/lib/db";
+import { demoData } from "@/lib/demo-data";
 import { failure } from "@/lib/http";
-import { csvCell, reportPdf } from "@/lib/reports";
+import { csvCell, reportPdf } from "@/lib/report-format";
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ resource: string }> },
@@ -15,30 +15,17 @@ export async function GET(
       p = new URL(req.url).searchParams;
     if (p.has("source") && p.get("source") !== "simulated")
       throw new Error("FORBIDDEN");
-    const scope = {
-      sourceType: "simulated",
-      station: { gallery: { organizationId: a.organizationId } },
-    };
     if (resource === "sessions" && p.get("id")) {
-      const session = await db.listeningSession.findFirst({
-        where: { ...scope, id: p.get("id")! },
-      });
+      const session = demoData.sessions.find((s) => s.id === p.get("id"));
       if (!session) throw new Error("NOT_FOUND");
-      const events = await db.rawEvent.findMany({
-        where: { ...scope, id: { in: session.eventIds as string[] } },
-        orderBy: { timestamp: "asc" },
-        include: { flags: true },
-      });
+      const eventIds = new Set(session.eventIds as string[]);
+      const events = demoData.events
+        .filter((e) => eventIds.has(e.id))
+        .sort((a, b) => +a.timestamp - +b.timestamp);
       return NextResponse.json({ session, events });
     }
     if (resource === "reports" && p.get("id")) {
-      const report = await db.report.findFirst({
-        where: {
-          id: p.get("id")!,
-          organizationId: a.organizationId,
-          sourceType: "simulated",
-        },
-      });
+      const report = demoData.reports.find((r) => r.id === p.get("id"));
       if (!report) throw new Error("NOT_FOUND");
       return new Response(Buffer.from(await reportPdf(report)), {
         headers: {
@@ -52,36 +39,37 @@ export async function GET(
     const { start, end } = await demoPeriod(p, a);
     if (resource === "analytics")
       return NextResponse.json(await demoAnalytics(a, start, end));
-    const where = {
-      ...scope,
-      ...(p.get("station") ? { stationId: p.get("station")! } : {}),
-      ...(p.get("status") ? { status: p.get("status")! } : {}),
-      OR: [
-        { startedAt: { gte: start, lt: end } },
-        { startedAt: null, endedAt: { gte: start, lt: end } },
-      ],
-    };
+    const rows = demoData.sessions
+      .filter((s) => {
+        const date = s.startedAt ?? s.endedAt;
+        return (
+          !!date &&
+          date >= start &&
+          date < end &&
+          (!p.get("station") || s.stationId === p.get("station")) &&
+          (!p.get("status") || s.status === p.get("status"))
+        );
+      })
+      .map((s) => ({
+        ...s,
+        station: {
+          name: demoData.stations.find((st) => st.id === s.stationId)!.name,
+        },
+      }));
     if (resource === "sessions") {
       const page = Math.max(1, Math.min(10000, Number(p.get("page")) || 1));
-      const [rows, total] = await Promise.all([
-        db.listeningSession.findMany({
-          where,
-          include: { station: { select: { name: true } } },
-          orderBy: { startedAt: p.get("sort") === "asc" ? "asc" : "desc" },
-          take: 20,
-          skip: (page - 1) * 20,
-        }),
-        db.listeningSession.count({ where }),
-      ]);
-      return NextResponse.json({ rows, total, page });
+      const sorted = [...rows].sort(
+        (a, b) =>
+          (+(a.startedAt ?? 0) - +(b.startedAt ?? 0)) *
+          (p.get("sort") === "asc" ? 1 : -1),
+      );
+      return NextResponse.json({
+        rows: sorted.slice((page - 1) * 20, page * 20),
+        total: sorted.length,
+        page,
+      });
     }
     if (resource === "reports" && p.get("format") === "csv") {
-      const rows = await db.listeningSession.findMany({
-        where,
-        include: { station: { select: { name: true } } },
-        take: 50000,
-        orderBy: { startedAt: "asc" },
-      });
       const csv = [
         [
           "Session ID",

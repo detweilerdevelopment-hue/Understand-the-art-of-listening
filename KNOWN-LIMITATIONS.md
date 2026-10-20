@@ -1,5 +1,7 @@
 # Known limitations and commissioning dependencies
 
+The public presentation is now database-free: its synthetic dataset is packaged, read-only, fixed to 56 days ending 20 October 2026, and independent of optional database measurements. Its event stream is historical sample activity, not live monitoring. It does not accept new sessions, simulator writes, administrator login, or scheduled jobs without a configured backend. Database, hardware, backup and cron dependencies below apply to a real installation, not to deploying the public preview.
+
 Local verification results are in [VERIFICATION.md](VERIFICATION.md). The npm vulnerability advisory endpoint was unavailable (ECONNRESET); rerun the dependency audit before deployment. Automated browser workflows passed with installed Chromium 139; an in-app visual screenshot review was unavailable.
 
 - No cloud account or production PostgreSQL credentials are supplied. Vercel, Neon, production cron and domain/HTTPS behavior require deployment validation.

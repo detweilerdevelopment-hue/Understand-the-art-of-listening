@@ -1,5 +1,11 @@
 # Local verification — 20 October 2026
 
+## Database-free presentation update
+
+Latest checks: **30 unit/component/integration tests passed**, **4 browser workflows passed**, strict TypeScript and ESLint passed, and the credential-free production build/browser check passed with no required application environment variables.
+
+A production Next.js build and anonymous Playwright workflow passed after local dotenv files were temporarily removed and database/auth credentials were unset. The production health endpoint confirmed packaged-demo mode. Public analytics, session pagination, evidence, real PDF/CSV downloads, anonymous navigation and access restrictions no longer query PostgreSQL. `test:demo` restores local environment files after the check. Packaged fixture tests additionally fail if the public demo imports a database client. The default Vercel build no longer runs migrations or configures cron. The historical database-backed results below remain relevant to the optional installation.
+
 ## Public demo update
 
 The root now opens `/demo/overview` without login. Latest checks passed: **25 unit/component/PostgreSQL integration tests**, **4 Playwright workflows**, strict TypeScript, ESLint, and a production Next.js build. Public API tests verify rejection of measured sources, private organization session/report IDs, measured reports even inside the demo organization, and anonymous write requests. Public navigation and saved PDF/CSV downloads work without cookies or credentials. The administrator workflow still verifies station management and real persisted simulator events. Login and simulator controls wait for hydration before accepting submissions. Vercel and Neon connections were discovered but are not installed/authorized; no cloud deployment is claimed.

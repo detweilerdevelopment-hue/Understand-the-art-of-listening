@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { db } from "./db";
 import { z } from "zod";
+import { backendEnabled } from "./backend";
 export async function rateLimit(key: string, limit = 60) {
   const now = new Date();
   const window = Math.floor(now.getTime() / 60000);
@@ -61,6 +62,7 @@ export type Actor = {
   demo: boolean;
 };
 export async function actor(): Promise<Actor> {
+  if (!backendEnabled()) throw new Error("UNAUTHORIZED");
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) throw new Error("UNAUTHORIZED");
   const user = await db.user.findUnique({

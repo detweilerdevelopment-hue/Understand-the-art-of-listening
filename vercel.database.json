@@ -1,0 +1,4 @@
+{
+  "crons": [{ "path": "/api/cron", "schedule": "0 7 * * 1" }],
+  "buildCommand": "prisma generate && prisma migrate deploy && next build"
+}

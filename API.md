@@ -2,7 +2,7 @@
 
 ## Public read-only demonstration
 
-`GET /api/demo/analytics`, `/api/demo/sessions` and `/api/demo/reports` provide the read contracts below without authentication, fixed to the seeded demo organization and `sourceType=simulated`. Session/report IDs are checked against both constraints. Requests for measured data are forbidden; writes have no public handlers (405). There is no public settings, credential, provisioning, reset, or report-generation endpoint. Disable all public access with `PUBLIC_DEMO_ENABLED=false`. Public exports use saved sample reports and do not modify stored measurements.
+`GET /api/demo/analytics`, `/api/demo/sessions` and `/api/demo/reports` are database-free, anonymous read endpoints over packaged synthetic data only. They never import a database client or query the optional installation. Sample session/report IDs are checked against that dataset. Requests for measured data are forbidden; writes have no public handlers (405). There is no public settings, credentials, reset, provisioning or report-generation endpoint. PDF/CSV downloads are generated from packaged observations and shared calculations. Disable access with PUBLIC_DEMO_ENABLED=false.
 
 ## Device ingestion
 

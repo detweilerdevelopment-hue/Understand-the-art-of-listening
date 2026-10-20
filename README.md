@@ -1,52 +1,60 @@
 # GalleryPulse
 
-A Next.js application for auditable gallery listening analytics. PostgreSQL is authoritative for events, reconstructed sessions, credentials, configuration and report snapshots. Synthetic measurements remain explicitly classified and filtered independently from measured observations.
+Gallery listening analytics with a public, read-only presentation demo and an optional PostgreSQL-backed installation.
 
-The home page now opens a **public, read-only demo** at `/demo/overview`. Clients can explore synthetic analytics, session evidence, and saved PDF/CSV samples without credentials. Administrator tools remain at `/login`. Public access is fixed to the seeded `gallery-demo` organization with `demo=true`; it cannot read measured data or another organization. Set `PUBLIC_DEMO_ENABLED=false` to disable the public demo. Demo date filters initially follow the latest sample observation so the presentation remains useful as the seed ages.
+## Run the presentation demo
 
-## Local setup
-
-Requires Node.js 24 LTS and PostgreSQL (local, Neon, or the optional embedded development server). No Docker required.
+Requires Node.js 24. **No database, login, secrets, migration, or seed is required.**
 
 ```powershell
 npm ci
-Copy-Item .env.example .env
-# Edit .env: set a random NEXTAUTH_SECRET, ADMIN_EMAIL and a strong ADMIN_PASSWORD.
-npm run db:local
-```
-
-Keep that terminal open. In another terminal:
-
-```powershell
-npm run db:generate
-npm run db:migrate
-npm run db:seed
 npm run dev
 ```
 
-Visit http://localhost:3000 and sign in using the administrator credentials you configured. The seed creates an isolated **demo organization**, four stations, 56 calendar days of reproducible sample activity, known missing-end cases, duplicate/delivery findings, and four historical weekly reports. The seed is idempotent. A fixed `SEED_END=2026-10-20` reproduces the same anchor date. Samples after the execution time are omitted.
+Open http://localhost:3000. The home page opens `/demo/overview` without credentials. Clients can explore charts, date filters, station comparisons, paginated sample sessions, underlying evidence, data-quality findings, and downloadable PDF/CSV reports.
 
-## Implemented flows
+The packaged sample is deterministic: four stations, 56 days of synthetic observations, and four weekly reports, anchored to 20 October 2026. Its data never represents real visitors or live hardware. Metrics and report snapshots use the same pure calculation functions as the database-backed installation. Public endpoints never import a database client. They cannot read real measurements, credentials, or other organizations.
 
-- Protected workspace, Auth.js credentials login, database-backed roles and organization scoping.
-- Executive metrics, playback trends, duration distribution and local-hour heatmap.
-- Station registration/editing, device provisioning/revocation and heartbeat health.
-- Polling live activity and server-paginated session explorer with source-event inspection.
-- Interactive simulator using the real ingestion service, pauses, sensor toggles, tab-local offline queue and synthetic reset.
-- CSV exports, server-generated PDF, immutable-until-regenerated report snapshots and retry-safe weekly cron.
-- Measurement configuration, data quality and methodology views; light/dark themes and mobile layout.
+For a production build:
 
-## Layout
-
-```text
-src/app/                 App Router screens and API handlers
-src/components/          Application shell, views, charts and shadcn-style button
-src/lib/                 Authentication, ingestion, projection, analytics, reporting
-prisma/                  PostgreSQL schema, migrations and reproducible seed
-scripts/                 Optional local PostgreSQL and reference gateway
-tests/                   Unit, component and PostgreSQL integration tests
-e2e/                     Playwright end-to-end workflow
-.github/workflows/        PostgreSQL-backed CI checks
+```powershell
+npm run build
+npm start
 ```
 
-Environment variables are listed in `.env.example`; deployment details are in [DEPLOYMENT.md](DEPLOYMENT.md). See [TESTING.md](TESTING.md) for verification and [KNOWN-LIMITATIONS.md](KNOWN-LIMITATIONS.md) before commissioning. This is a software foundation, not a certified physical measurement installation.
+Deploy the GitHub repository to Vercel with the default `vercel.json`. No environment variables or Neon account are needed for this preview. See [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## Optional real installation
+
+PostgreSQL is required only for persisted device events, administrator login, station management, the interactive station simulator, report history, and automated reporting. Public preview data remains packaged even when the backend is connected.
+
+1. Configure the commented backend variables in `.env.example`, using `.env` locally.
+2. Start PostgreSQL; the optional local service is `npm run db:local` in a separate terminal.
+3. Run `npm run db:generate`, `npm run db:migrate`, and `npm run db:seed` for an isolated demonstration tenant, or `npm run db:provision` for a production tenant.
+4. Open `/login` with the configured administrator credentials.
+
+`DEMO_ONLY=true` explicitly disables administrator/backend access even when a database URL exists. `PUBLIC_DEMO_ENABLED=false` disables public sample pages and APIs. Neither flag is required for the default presentation.
+
+## Verification
+
+- `npm test`: unit, component, and packaged-demo checks.
+- `RUN_DB_TESTS=true npm test`: also runs real PostgreSQL integration checks (PowerShell: `$env:RUN_DB_TESTS='true'; npm test`).
+- `npm run test:e2e`: public and administrator workflows; full suite requires a seeded backend.
+- `npm run test:demo`: temporarily hides local dotenv files, removes database/auth credentials, builds and runs the production preview, and verifies its anonymous browser workflow. Local environment files are restored afterward. Requires an installed Playwright Chromium browser (or E2E_BROWSER_PATH).
+
+## Project layout
+
+```text
+src/app/                 Application screens, public demo and private APIs
+src/components/          Responsive dashboard, charts, login and simulator
+src/lib/demo-data.ts      Packaged deterministic synthetic observations
+src/lib/analytics-core.ts Shared metric and aggregation calculations
+src/lib/report-format.ts Shared report snapshot, PDF and CSV formatting
+src/lib/                 Optional authentication, database and ingestion services
+prisma/                  Optional database schema, migrations and seed
+scripts/                 Verification, local PostgreSQL and reference gateway
+tests/, e2e/             Unit, integration and browser tests
+.github/workflows/        CI, including a separate database-free build/job
+```
+
+[TESTING.md](TESTING.md) and [VERIFICATION.md](VERIFICATION.md) record verification. [KNOWN-LIMITATIONS.md](KNOWN-LIMITATIONS.md) and the hardware/methodology guides describe commissioning requirements. The software is not a production-certified physical measurement installation.

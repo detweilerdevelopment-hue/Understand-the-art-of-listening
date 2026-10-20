@@ -1,5 +1,11 @@
 # Architecture
 
+## Database-free presentation
+
+The default public demo uses `demo-data.ts`: deterministic synthetic observations and reconstructed sessions in a fixed 56-day sample. Public routes import only this dataset, `analytics-core.ts`, and `report-format.ts`. Date filters, pagination, evidence inspection and PDF/CSV exports operate on these samples; no credential, database, seed, persistence service or scheduled process is used. Module-local sample objects are read-only presentation fixtures, never an authoritative measurement store. The default Vercel configuration builds only the application. `vercel.database.json` preserves the optional migration/cron configuration for a real installation. Without DATABASE_URL, administrator/auth routes are disabled and the health endpoint reports packaged-demo mode.
+
+The database-backed architecture below applies to the optional real installation. Both paths use the same aggregation and report-formatting functions.
+
 ## Data flow
 
 Player/sensor gateway → HTTPS `/api/events` → credential lookup + organization/station scope → Zod schema → PostgreSQL transaction → raw event + delivery flags → event-time session projection → shared analytics → dashboard / saved report → PDF or CSV.

@@ -1,8 +1,8 @@
 # Client handoff
 
-For a proposal presentation, share the hosted domain root or `/demo/overview`. It opens a read-only synthetic workspace without credentials. Visitors can browse analytics and evidence and download saved sample PDF/CSV reports. Administrator tools and live measurements remain behind `/login`. Until hosting is connected, use http://localhost:3000/demo/overview only on this computer; external clients cannot reach a localhost address.
+For a proposal presentation, share the hosted domain root or `/demo/overview`. It opens a read-only synthetic workspace without credentials. Visitors can browse analytics and evidence and download saved sample PDF/CSV reports. Administrator tools and live measurements are available only when the optional database-backed installation is configured. The public demo always uses packaged samples. Deploy the repository to Vercel with no environment variables for a public preview. No Neon database or seed is required. Until hosting is connected, http://localhost:3000/demo/overview is accessible only on this computer.
 
-Sign in with the workspace credentials provided by your administrator. Start on Executive overview. Select reporting dates and Synthetic or Measured data; every view and export follows that selection. Synthetic observations never represent actual visitors.
+For the optional database-backed installation, sign in with the workspace credentials provided by your administrator. Start on Executive overview. Select reporting dates and Synthetic or Measured data; every view and export follows that selection. Synthetic observations never represent actual visitors.
 
 Register a station with a name, physical location and integration description. Under Manage, administrators can provision a gateway token, which is displayed once. Transfer it securely to the gateway operator. Revoke it if exposed. A station stays offline until current heartbeat evidence arrives. Maintenance status is explicit.
 

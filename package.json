@@ -15,7 +15,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:local": "node scripts/local-db.mjs",
-    "db:provision": "tsx scripts/provision-admin.ts"
+    "db:provision": "tsx scripts/provision-admin.ts",
+    "test:demo": "node scripts/verify-no-db.mjs"
   },
   "dependencies": {
     "@prisma/client": "6.19.0",

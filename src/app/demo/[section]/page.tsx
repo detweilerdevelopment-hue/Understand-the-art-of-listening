@@ -6,6 +6,7 @@ import {
   demoSections,
 } from "@/lib/public-demo";
 import { Dashboard } from "@/components/dashboard";
+import { backendEnabled } from "@/lib/backend";
 export const dynamic = "force-dynamic";
 export default async function DemoPage({
   params,
@@ -24,7 +25,13 @@ export default async function DemoPage({
     <Dashboard
       section={section}
       initial={JSON.parse(JSON.stringify(data))}
-      user={{ name: a.name, role: a.role, demo: true, publicDemo: true }}
+      user={{
+        name: a.name,
+        role: a.role,
+        demo: true,
+        publicDemo: true,
+        backendEnabled: backendEnabled(),
+      }}
     />
   );
 }

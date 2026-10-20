@@ -34,6 +34,22 @@ test("client can explore the demo and reports without credentials", async ({
     await page.goto("/demo/" + section);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.locator(".alert.error")).toHaveCount(0);
+    if (section === "sessions") {
+      await page
+        .getByRole("button", { name: /Inspect session/ })
+        .first()
+        .click();
+      await expect(
+        page.getByRole("dialog", { name: "Session evidence" }),
+      ).toBeVisible();
+      expect(
+        await page
+          .getByRole("dialog")
+          .getByText("Raw event", { exact: true })
+          .count(),
+      ).toBeGreaterThan(0);
+      await page.getByRole("button", { name: "Close dialog" }).click();
+    }
   }
   const download = page.waitForEvent("download");
   await page

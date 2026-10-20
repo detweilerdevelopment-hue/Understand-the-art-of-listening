@@ -1,5 +1,11 @@
 # Verification
 
+## Database-free production check
+
+Run `npx playwright install chromium`, then `npm run test:demo`. It temporarily moves recognized local dotenv files aside, removes backend/auth environment variables, generates Prisma types without a database connection, builds Next.js, starts a production server on port 3100, and runs the anonymous public workflow. It restores local dotenv files afterward. Stop local Next.js processes first on Windows to avoid a native engine DLL lock during client generation. E2E_BROWSER_PATH may point to an existing Chromium executable. The CI `demo-without-database` job has no PostgreSQL service or database/auth credentials.
+
+`tests/demo-data.test.ts` rejects any import of a database client and checks sample metrics, date/station filters, pagination, raw evidence, report consistency, real PDF/CSV bytes and access restrictions. Backend integration checks are optional and skipped unless RUN_DB_TESTS=true.
+
 `e2e/public-demo.spec.ts` verifies anonymous navigation, sample PDF/CSV downloads, hidden administration controls, and denial of measured sources and private write endpoints. PostgreSQL integration tests also check that exact private session/report IDs and measured reports in the demo organization cannot be accessed through public demo APIs. Database integration tests require the demonstration seed for these assertions.
 
 Actual local results are recorded in [VERIFICATION.md](VERIFICATION.md). To use an existing Chromium installation for the automated suite, set E2E_BROWSER_PATH to its executable; otherwise install the browser version supplied by Playwright.
