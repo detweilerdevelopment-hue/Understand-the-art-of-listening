@@ -15,7 +15,7 @@ export async function analytics(
     sourceType,
     startedAt: { gte: start, lt: end },
   };
-  const [sessions, previous, stations, events, flags, reports] =
+  const [sessions, previous, stations, events, flags, reports, heartbeatCounts, qualityFlagCount] =
     await Promise.all([
       db.listeningSession.findMany({ where, orderBy: { startedAt: "desc" } }),
       db.listeningSession.findMany({
@@ -72,6 +72,24 @@ export async function analytics(
         orderBy: { generatedAt: "desc" },
         take: 30,
       }),
+      db.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(DISTINCT (e."stationId", date_trunc('minute', e.timestamp))) AS count
+        FROM "RawEvent" e
+        JOIN "Station" s ON s.id = e."stationId"
+        JOIN "Gallery" g ON g.id = s."galleryId"
+        WHERE g."organizationId" = ${a.organizationId}
+          AND s.enabled = true AND s.maintenance = false
+          AND e."sourceType" = ${sourceType}
+          AND e.type = 'station_heartbeat'
+          AND e.timestamp >= ${start} AND e.timestamp < ${end}
+      `,
+      db.dataQualityFlag.count({
+        where: { event: {
+          station: { gallery: { organizationId: a.organizationId } },
+          sourceType,
+          timestamp: { gte: start, lt: end },
+        } },
+      }),
     ]);
   return summarizeAnalytics({
     sessions,
@@ -84,6 +102,8 @@ export async function analytics(
     start,
     end,
     sourceType,
+    heartbeatMinuteCount: Number(heartbeatCounts[0]?.count ?? 0),
+    qualityFlagCount,
   });
 }
 export type { Analytics } from "./analytics-core";

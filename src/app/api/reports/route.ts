@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { actor, canWrite } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createReport, reportPdf, csvCell } from "@/lib/reports";
-import { failure, period, sameOrigin } from "@/lib/http";
+import { failure, period, sameOrigin, boundedJson } from "@/lib/http";
 export async function POST(req: Request) {
   try {
     sameOrigin(req);
     const a = await actor();
     canWrite(a);
-    const body = await req.json(),
+    const body = z.object({ start: z.string(), end: z.string(), source: z.enum(["measured", "simulated"]).default("simulated") }).parse(await boundedJson(req)),
       p = new URLSearchParams(body);
     const { start, end } = period(p);
     const report = await createReport(
@@ -44,9 +45,11 @@ export async function GET(req: Request) {
           startedAt: { gte: start, lt: end },
         },
         include: { station: true },
-        take: 50000,
+        take: 50001,
         orderBy: { startedAt: "asc" },
       });
+      if (rows.length > 50000)
+        return NextResponse.json({ error: "Export exceeds 50,000 sessions. Choose a shorter date range." }, { status: 413 });
       await db.auditLog.create({
         data: {
           organizationId: a.organizationId,

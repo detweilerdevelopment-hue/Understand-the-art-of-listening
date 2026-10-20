@@ -990,7 +990,7 @@ export function Dashboard({
                 />
                 <Kpi
                   label="Processing flags"
-                  value={String(data.flags.length)}
+                  value={String(data.qualityFlagCount)}
                   icon={<AlertTriangle size={17} />}
                   foot="Up to 200 event-level findings"
                 />
@@ -1478,7 +1478,7 @@ export function Dashboard({
               <section className="card">
                 <CardHead
                   title="Verification findings"
-                  subtitle="Ingestion anomalies and retries, linked to raw evidence."
+                  subtitle={`Showing ${data.flags.length} of ${data.qualityFlagCount} event findings; duplicate retries below use the latest event sample.`}
                 />
                 <div className="table-filters">
                   <Search size={15} />

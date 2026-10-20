@@ -57,4 +57,4 @@ tests/, e2e/             Unit, integration and browser tests
 .github/workflows/        CI, including a separate database-free build/job
 ```
 
-[TESTING.md](TESTING.md) and [VERIFICATION.md](VERIFICATION.md) record verification. [KNOWN-LIMITATIONS.md](KNOWN-LIMITATIONS.md) and the hardware/methodology guides describe commissioning requirements. The software is not a production-certified physical measurement installation.
+[TESTING.md](TESTING.md) and [VERIFICATION.md](VERIFICATION.md) record verification. [IMPLEMENTATION-REVIEW.md](IMPLEMENTATION-REVIEW.md) compares the original requirements with current evidence and remaining gaps. [KNOWN-LIMITATIONS.md](KNOWN-LIMITATIONS.md) and the hardware/methodology guides describe commissioning requirements. The software is not a production-certified physical measurement installation.

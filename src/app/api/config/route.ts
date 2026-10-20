@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { actor, adminOnly } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { failure, sameOrigin } from "@/lib/http";
+import { failure, sameOrigin, boundedJson } from "@/lib/http";
 export async function POST(req: Request) {
   try {
     sameOrigin(req);
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
         engagedSeconds: z.number().int().min(10).max(3600),
         heartbeatTimeoutSeconds: z.number().int().min(60).max(3600),
       })
-      .parse(await req.json());
+      .parse(await boundedJson(req));
     const config = await db.measurementConfiguration.upsert({
       where: { organizationId: a.organizationId },
       create: { ...data, organizationId: a.organizationId },

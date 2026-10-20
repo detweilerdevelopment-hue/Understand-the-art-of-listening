@@ -10,6 +10,6 @@ Use the simulator before connecting equipment: choose a station, start, pause/re
 
 Review Data quality for ingestion findings and Session explorer for missing starts/ends or conflicting evidence. An unknown duration is intentional. A playback stop means ended, not completed content. Session counts do not imply unique visitors or attention.
 
-Generate report exports for the selected period. PDFs include definitions, source classification, generation time, quality and limitations. Historical PDFs use saved snapshots; explicit regeneration replaces a matching period/source snapshot. CSV provides up to 50,000 sessions. Weekly reports require a live Vercel cron deployment; email delivery is not implemented.
+Generate report exports for the selected period. PDFs include definitions, source classification, generation time, quality and limitations. Historical PDFs use saved snapshots; explicit regeneration replaces a matching period/source snapshot. CSV provides up to 50,000 sessions; larger exports return an instruction to choose a shorter period. Weekly reports require a live Vercel cron deployment; email delivery is not implemented.
 
 ADMIN controls thresholds and heartbeat timeout in Workspace settings. A simulation reset removes only synthetic events, sessions and reports within your organization; real data is preserved. To restore samples, an operator runs the seed script. Agree backup, retention, credential rotation and incident ownership before the gallery opens.

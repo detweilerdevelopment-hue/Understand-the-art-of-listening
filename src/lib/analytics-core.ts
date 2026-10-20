@@ -25,6 +25,8 @@ export type AnalyticsInput = {
   start: Date;
   end: Date;
   sourceType: string;
+  heartbeatMinuteCount?: number;
+  qualityFlagCount?: number;
 };
 export function summarizeAnalytics({
   sessions,
@@ -37,6 +39,8 @@ export function summarizeAnalytics({
   start,
   end,
   sourceType,
+  heartbeatMinuteCount,
+  qualityFlagCount,
 }: AnalyticsInput) {
   const current = metrics(sessions, config?.engagedSeconds),
     prior = metrics(previous, config?.engagedSeconds);
@@ -122,7 +126,7 @@ export function summarizeAnalytics({
   const enabled = stations.filter((s) => s.enabled && !s.maintenance);
   const denominator =
     (enabled.length * (end.getTime() - start.getTime())) / 60000;
-  const heartbeatMinutes = new Set(
+  const heartbeatMinutes = heartbeatMinuteCount ?? new Set(
     events
       .filter(
         (e) =>
@@ -146,7 +150,8 @@ export function summarizeAnalytics({
     heatmap,
     distribution,
     coverage: denominator ? Math.min(heartbeatMinutes / denominator, 1) : null,
-    coverageLimited: events.length === 3000,
+    coverageLimited: heartbeatMinuteCount === undefined && events.length === 3000,
+    qualityFlagCount: qualityFlagCount ?? flags.length,
     events,
     flags,
     reports,

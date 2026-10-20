@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { actor, canWrite, rateLimit } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ingest } from "@/lib/ingestion";
-import { failure, sameOrigin } from "@/lib/http";
+import { failure, sameOrigin, boundedJson } from "@/lib/http";
 export async function POST(req: Request) {
   try {
     sameOrigin(req);
     const a = await actor();
     canWrite(a);
     await rateLimit(`sim:${a.id}`, 120);
-    const raw = await req.json();
+    const raw = z.object({ stationId: z.string().min(1).max(120) }).passthrough().parse(await boundedJson(req));
     const device = await db.device.findFirst({
       where: {
         stationId: raw.stationId,

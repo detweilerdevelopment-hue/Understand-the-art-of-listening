@@ -4,7 +4,7 @@ import { z } from "zod";
 import { actor, adminOnly } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hashToken } from "@/lib/ingestion";
-import { failure, sameOrigin } from "@/lib/http";
+import { failure, sameOrigin, boundedJson } from "@/lib/http";
 export async function POST(req: Request) {
   try {
     sameOrigin(req);
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     adminOnly(a);
     const { stationId, name } = z
       .object({ stationId: z.string(), name: z.string().min(2).max(80) })
-      .parse(await req.json());
+      .parse(await boundedJson(req));
     if (
       !(await db.station.findFirst({
         where: { id: stationId, gallery: { organizationId: a.organizationId } },
@@ -47,7 +47,7 @@ export async function DELETE(req: Request) {
     adminOnly(a);
     const { deviceId } = z
       .object({ deviceId: z.string() })
-      .parse(await req.json());
+      .parse(await boundedJson(req));
     const device = await db.device.findFirst({
       where: {
         id: deviceId,

@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashToken, ingest } from "@/lib/ingestion";
 import { rateLimit } from "@/lib/auth";
-import { failure } from "@/lib/http";
+import { failure, boundedJson } from "@/lib/http";
+import { backendEnabled } from "@/lib/backend";
 export async function POST(req: Request) {
   try {
     const token = req.headers.get("authorization")?.replace(/^Bearer /, "");
     if (!token) throw new Error("UNAUTHORIZED");
+    if (!backendEnabled())
+      return NextResponse.json({ error: "Database backend is disabled" }, { status: 503 });
     const credential = await db.deviceCredential.findUnique({
       where: { tokenHash: hashToken(token) },
       include: {
@@ -15,11 +18,9 @@ export async function POST(req: Request) {
     });
     if (!credential || credential.revokedAt) throw new Error("UNAUTHORIZED");
     await rateLimit(`device:${credential.deviceId}`, 180);
-    if (Number(req.headers.get("content-length") ?? 0) > 16384)
-      return NextResponse.json({ error: "Payload too large" }, { status: 413 });
     return NextResponse.json(
       await ingest(
-        await req.json(),
+        await boundedJson(req),
         credential.deviceId,
         credential.device.station.gallery.organizationId,
       ),

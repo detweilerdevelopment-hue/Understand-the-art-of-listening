@@ -16,6 +16,8 @@ export function failure(e: unknown) {
           ? 404
           : message === "RATE_LIMIT"
             ? 429
+            : message === "PAYLOAD_TOO_LARGE"
+              ? 413
             : e instanceof ZodError ||
                 e instanceof SyntaxError ||
                 ["FUTURE_TIMESTAMP", "EVENT_ID_CONFLICT"].includes(message)
@@ -50,6 +52,8 @@ export function sameOrigin(req: Request) {
 }
 export function period(params: URLSearchParams) {
   const end = new Date(params.get("end") ?? new Date().toISOString());
+  if (!Number.isFinite(+end))
+    throw new ZodError([{ code: "custom", path: ["end"], message: "Invalid end date" }]);
   const start = new Date(
     params.get("start") ??
       new Date(end.getTime() - 28 * 86400000).toISOString(),
@@ -68,4 +72,35 @@ export function period(params: URLSearchParams) {
       },
     ]);
   return { start, end };
+}
+
+// Enforce the bytes actually received, including chunked requests and false headers.
+export async function boundedJson(req: Request, limit = 16384): Promise<unknown> {
+  if (Number(req.headers.get("content-length") ?? 0) > limit)
+    throw new Error("PAYLOAD_TOO_LARGE");
+  if (!req.body) throw new SyntaxError("Empty JSON body");
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > limit) {
+        await reader.cancel();
+        throw new Error("PAYLOAD_TOO_LARGE");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
 }

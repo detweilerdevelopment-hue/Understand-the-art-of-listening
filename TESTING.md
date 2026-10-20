@@ -16,6 +16,7 @@ npm run typecheck
 npm run lint
 npm test
 $env:RUN_DB_TESTS='true'
+$env:DEMO_ONLY='false'
 npm run test:integration
 npm run build
 npx playwright install chromium
@@ -28,6 +29,6 @@ PostgreSQL integration tests require `.env` and an initialized database. They cr
 
 Playwright requires seeded ADMIN_EMAIL/ADMIN_PASSWORD. It verifies unauthenticated denial, credentials login, station creation, playback start/pause/resume/stop, persisted session appearance and a PDF download. The test leaves its QA station and simulated measurements in the demo organization. Use an expendable test database. Browser availability depends on the execution environment.
 
-CI supplies a real PostgreSQL 17 service and runs migration, seed, typecheck, lint, tests, build and Playwright. Review the CI result on your actual provider; adding a workflow does not mean it has run remotely.
+CI supplies a real PostgreSQL 17 service and runs migration, seed, typecheck, lint, tests, build and Playwright. In CI, Playwright starts the production server from that build and refuses to reuse an unrelated server. Locally it starts development unless E2E_URL targets a separately started server. Review the CI result on your actual provider; adding a workflow does not mean it has run remotely.
 
 Physical acceptance is separate: compare gateway observations against known timed playback, network disconnects, buffering, restarts, power failure and clock skew. Document observed error rates rather than inventing accuracy percentages. See KNOWN-LIMITATIONS.md for unresolved operational validation.

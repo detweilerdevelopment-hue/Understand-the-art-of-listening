@@ -13,7 +13,7 @@ export function reportSnapshot(data: Analytics) {
         metrics: s.metrics,
       })),
       quality: {
-        flags: data.flags.length,
+        flags: data.qualityFlagCount,
         incomplete: data.metrics.incomplete,
         coverage: data.coverage,
       },
@@ -24,14 +24,14 @@ export function reportSnapshot(data: Analytics) {
           "Sum of playback intervals, excluding pauses. Unknown when start or end evidence is missing or contradictory.",
         engagement: `Known-duration sessions with at least ${data.metrics.engagedSeconds} seconds divided by known-duration sessions.`,
         coverage:
-          "Observed heartbeat minutes divided by all enabled station minutes; bounded event sample may undercount.",
+          "Distinct observed station-heartbeat minutes divided by all enabled station minutes; full-period database count when using the backend.",
       },
       limitations: [
         "Playback does not verify that headphones were worn.",
         "Sessions are interactions, not unique visitors.",
         "No inferred duration is substituted for missing evidence.",
         "UTC period boundaries; timezone used for hourly grouping.",
-        "Heartbeat coverage is conservative and may be sample-limited.",
+        "Heartbeat coverage records observed minutes, not verified hardware uptime.",
       ],
     }),
   ) as Prisma.InputJsonValue;

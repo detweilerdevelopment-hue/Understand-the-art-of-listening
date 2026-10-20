@@ -43,6 +43,9 @@ export async function ingest(
           if (existing) {
             if (
               existing.type !== event.type ||
+              existing.sourceType !== event.sourceType ||
+              existing.sourceId !== event.sourceId ||
+              existing.schemaVersion !== event.schemaVersion ||
               existing.timestamp.getTime() !== Date.parse(event.timestamp) ||
               existing.sessionKey !== (event.sessionKey ?? null) ||
               canonicalMetadata(existing.metadata) !==

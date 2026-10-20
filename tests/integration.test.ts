@@ -185,6 +185,42 @@ describe.runIf(enabled)("PostgreSQL pipeline", () => {
     expect(a.metrics.sessions).toBe(0);
     expect(a.stations).toHaveLength(0);
   });
+  it("counts heartbeat coverage and quality findings beyond display limits", async () => {
+    const start = new Date("2025-01-01T00:00:00Z");
+    const end = new Date(+start + 4000 * 60000);
+    await db.rawEvent.createMany({ data: Array.from({ length: 3101 }, (_, i) => ({
+      eventId: `coverage-${i}`, stationId, deviceId, sourceId: deviceId,
+      sourceType: "simulated", type: "station_heartbeat",
+      timestamp: new Date(+start + i * 60000),
+    })) });
+    const evidence = await db.rawEvent.findMany({ where: { stationId, eventId: { startsWith: "coverage-" } }, take: 205 });
+    await db.dataQualityFlag.createMany({ data: evidence.map((event) => ({
+      eventId: event.id, code: "delayed_ingestion", detail: "Coverage test",
+    })) });
+    const result = await analytics(actor, start, end);
+    expect(result.events).toHaveLength(3000);
+    expect(result.flags).toHaveLength(200);
+    expect(result.coverage).toBe(3101 / 4000);
+    expect(result.coverageLimited).toBe(false);
+    expect(result.qualityFlagCount).toBe(205);
+  });
+  it("rejects a retry that changes measured evidence to inferred", async () => {
+    const physicalId = `${prefix}-physical`;
+    await db.device.create({ data: { id: physicalId, stationId, name: "Test physical adapter", simulated: false } });
+    const event = {
+      eventId: "classification", stationId, sourceId: physicalId,
+      sourceType: "measured", schemaVersion: 1,
+      type: "station_heartbeat", timestamp: new Date().toISOString(),
+    };
+    try {
+      await ingest(event, physicalId, orgId);
+      await expect(ingest({ ...event, sourceType: "inferred" }, physicalId, orgId))
+        .rejects.toThrow("EVENT_ID_CONFLICT");
+    } finally {
+      await db.rawEvent.deleteMany({ where: { deviceId: physicalId } });
+      await db.device.delete({ where: { id: physicalId } });
+    }
+  });
   it("public demo rejects private evidence and measured reports even by exact ID", async () => {
     const session = await db.listeningSession.findFirstOrThrow({
       where: { stationId },

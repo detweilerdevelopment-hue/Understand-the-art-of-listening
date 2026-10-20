@@ -196,7 +196,8 @@ function buildSample(): SampleData {
 }
 function sampleAnalytics(data: SampleData, start: Date, end: Date) {
   const inside = (date: Date | null) => !!date && date >= start && date < end;
-  const events = data.events.filter((e) => inside(e.timestamp)).slice(0, 3000);
+  const periodEvents = data.events.filter((e) => inside(e.timestamp));
+  const events = periodEvents.slice(0, 3000);
   const previousStart = new Date(+start - (+end - +start));
   return summarizeAnalytics({
     start,
@@ -211,8 +212,13 @@ function sampleAnalytics(data: SampleData, start: Date, end: Date) {
         !!s.startedAt && s.startedAt >= previousStart && s.startedAt < start,
     ),
     events,
-    flags: data.events
-      .filter((e) => inside(e.timestamp))
+    heartbeatMinuteCount: new Set(periodEvents.filter((e) =>
+      e.type === "station_heartbeat" && data.stations.some((s) =>
+        s.id === e.stationId && s.enabled && !s.maintenance,
+      ),
+    ).map((e) => `${e.stationId}:${Math.floor(+e.timestamp / 60000)}`)).size,
+    qualityFlagCount: periodEvents.reduce((count, event) => count + event.flags.length, 0),
+    flags: periodEvents
       .flatMap((event) => event.flags.map((flag) => ({ ...flag, event })))
       .slice(0, 200),
   });

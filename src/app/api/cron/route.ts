@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createReport } from "@/lib/reports";
+import { backendEnabled } from "@/lib/backend";
 export async function GET(req: Request) {
   const expected = `Bearer ${process.env.CRON_SECRET ?? ""}`,
     actual = req.headers.get("authorization") ?? "";
@@ -13,6 +14,8 @@ export async function GET(req: Request) {
     !timingSafeEqual(actualBytes, expectedBytes)
   )
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!backendEnabled())
+    return NextResponse.json({ error: "Database backend is disabled" }, { status: 503 });
   const now = new Date(),
     end = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
